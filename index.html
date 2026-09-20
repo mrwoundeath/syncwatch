@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SyncWatch 🎬</title>
+<style>
+:root {
+  --bg: #0d0d14;
+  --surface: #16161f;
+  --surface2: #1e1e2a;
+  --border: #2a2a3a;
+  --accent: #7c6af7;
+  --accent2: #5b4fe0;
+  --text: #e8e8f5;
+  --text2: #8888aa;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Arial, sans-serif; overflow: hidden; }
+
+/* ─── SCREENS ─── */
+.screen { display: none; height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ─── JOIN SCREEN ─── */
+#joinScreen {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 30%, #1a1535 0%, var(--bg) 70%);
+}
+.join-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 28px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.join-logo { text-align: center; font-size: 52px; }
+.join-title { text-align: center; font-size: 24px; font-weight: 800; }
+.join-sub { text-align: center; font-size: 14px; color: var(--text2); line-height: 1.6; }
+.field-label { font-size: 13px; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
+.field-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  font-family: inherit;
+  text-align: right;
+}
+.field-input:focus { border-color: var(--accent); }
+.divider { display: flex; align-items: center; gap: 12px; color: var(--text2); font-size: 13px; }
+.divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+/* ─── MAIN APP ─── */
+#appScreen { overflow: hidden; }
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+}
+.header-logo { font-size: 22px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.header-room {
+  font-size: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  color: var(--text2);
+  font-family: monospace;
+  cursor: pointer;
+  transition: border-color .2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-room:hover { border-color: var(--accent); color: var(--accent); }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+.conn-dot.ok { background: var(--green); }
+.conn-dot.warn { background: var(--yellow); }
+.header-viewers {
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.host-badge {
+  font-size: 11px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-weight: 700;
+  display: none;
+}
+.host-badge.show { display: inline-block; }
+
+/* Main layout */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ─── VIDEO ─── */
+.video-panel { flex: 1; display: flex; flex-direction: column; background: #000; overflow: hidden; position: relative; }
+.video-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: #000; overflow: hidden; }
+
+video { width: 100%; height: 100%; object-fit: contain; display: none; }
+video.loaded { display: block; }
+
+/* Upload zone */
+.upload-zone {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  color: var(--text2);
+  padding: 24px;
+}
+.upload-zone.hidden { display: none; }
+
+.drop-area {
+  border: 2px dashed var(--border);
+  border-radius: 20px;
+  padding: 40px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  max-width: 340px;
+  width: 100%;
+  background: rgba(124,106,247,.04);
+}
+.drop-area:hover, .drop-area.drag { border-color: var(--accent); background: rgba(124,106,247,.1); }
+.drop-icon { font-size: 52px; margin-bottom: 12px; }
+.drop-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.drop-sub { font-size: 13px; line-height: 1.6; }
+.drop-formats { font-size: 12px; margin-top: 8px; color: var(--accent); }
+.upload-progress-wrap { width: 100%; max-width: 340px; display: none; flex-direction: column; gap: 8px; align-items: center; }
+.upload-progress-wrap.show { display: flex; }
+.progress-bar { width: 100%; height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 6px; width: 0%; transition: width .1s; }
+.progress-label { font-size: 13px; color: var(--accent); }
+
+/* Viewer zone (non-host) */
+.viewer-zone {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  color: var(--text2); padding: 24px;
+}
+.viewer-zone.hidden { display: none; }
+.viewer-waiting { text-align: center; }
+.viewer-waiting .big { font-size: 48px; margin-bottom: 12px; }
+.viewer-waiting h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+
+/* Controls */
+.controls {
+  background: linear-gradient(transparent, rgba(0,0,0,.9));
+  padding: 12px 16px 14px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.controls.show { display: flex; }
+.controls.visible { opacity: 1; }
+
+.seek-wrap {
+  width: 100%;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+.seek-track { width: 100%; height: 4px; background: rgba(255,255,255,.2); border-radius: 4px; position: relative; overflow: visible; }
+.seek-fill { height: 100%; background: var(--accent); border-radius: 4px; pointer-events: none; width: 0%; position: relative; }
+.seek-fill::after {
+  content: '';
+  position: absolute;
+  right: -6px; top: 50%;
+  transform: translateY(-50%);
+  width: 12px; height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.seek-wrap:hover .seek-fill::after { opacity: 1; }
+
+.ctrl-row { display: flex; align-items: center; gap: 10px; }
+.ctrl-btn {
+  background: none; border: none; color: #fff;
+  font-size: 22px; cursor: pointer; padding: 4px 6px;
+  border-radius: 8px; transition: background .15s; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,.15); }
+.ctrl-btn:disabled { opacity: .3; cursor: default; }
+
+.time-disp { font-size: 12px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vol-wrap { display: flex; align-items: center; gap: 6px; }
+input[type=range].vol-slider { width: 70px; accent-color: var(--accent); cursor: pointer; }
+.fullscreen-btn { margin-right: 0; margin-left: auto; }
+
+.sync-toast {
+  position: absolute;
+  top: 16px; left: 50%; transform: translateX(-50%);
+  background: rgba(34,197,94,.9);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.sync-toast.show { opacity: 1; }
+
+/* ─── CHAT ─── */
+.chat-panel {
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.chat-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scroll-behavior: smooth;
+}
+.msgs::-webkit-scrollbar { width: 3px; }
+.msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.msg { padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45; max-width: 100%; word-break: break-word; animation: fadeUp .2s; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.msg.me { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-left-radius: 4px; }
+.msg.other { background: var(--surface2); align-self: flex-start; border-bottom-right-radius: 4px; }
+.msg.system { background: none; color: var(--text2); font-size: 12px; text-align: center; padding: 2px 8px; align-self: center; }
+.msg .sender { font-size: 11px; font-weight: 700; opacity: .7; margin-bottom: 3px; }
+.msg .mtime { font-size: 10px; opacity: .45; margin-top: 3px; }
+.msg.me .mtime { text-align: left; }
+
+.chat-input-area {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+textarea.chat-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 13px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  resize: none;
+  height: 40px;
+  max-height: 100px;
+  transition: border-color .2s;
+  font-family: inherit;
+  line-height: 1.4;
+}
+textarea.chat-input:focus { border-color: var(--accent); }
+.send-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .2s;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.send-btn:hover { background: var(--accent2); }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .main { flex-direction: column; }
+  .chat-panel { width: 100%; height: 42vh; border-right: none; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .video-panel { flex: 1; }
+  input[type=range].vol-slider { width: 55px; }
+}
+</style>
+</head>
+<body>
+
+<!-- JOIN SCREEN -->
+<div id="joinScreen" class="screen active">
+  <div class="join-card">
+    <div class="join-logo">🎬</div>
+    <div class="join-title">SyncWatch</div>
+    <div class="join-sub">فیلم و سریال رو با دوستت همزمان ببین — هر دو فایل رو لوکال باز می‌کنن، فقط پخش sync میشه</div>
+
+    <div>
+      <div class="field-label">اسمت چیه؟</div>
+      <input class="field-input" id="nameInput" type="text" placeholder="مثلاً: علی" maxlength="20">
+    </div>
+
+    <div>
+      <div class="field-label">کد اتاق</div>
+      <input class="field-input" id="roomInput" type="text" placeholder="مثلاً: film1 (خودت بساز یا از دوستت بگیر)" maxlength="20">
+    </div>
+
+    <button class="btn btn-primary" id="joinBtn" onclick="joinRoom()">
+      ورود به اتاق ←
+    </button>
+
+    <div style="font-size:12px; color:var(--text2); text-align:center; line-height:1.7;">
+      ⚡ بدون آپلود — هر دو نفر همون فایل رو لوکال باز می‌کنن<br>
+      🔒 فقط دستورات sync (play/pause) رد و بدل میشه
+    </div>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen" class="screen">
+  <header>
+    <div class="header-logo">🎬 SyncWatch</div>
+    <div class="header-room" id="roomBadge" onclick="copyRoom()" title="کلیک برای کپی کد اتاق">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="roomLabel">—</span>
+    </div>
+    <div class="host-badge" id="hostBadge">میزبان</div>
+    <div class="header-viewers" id="viewersLabel">۱ نفر</div>
+  </header>
+
+  <div class="main">
+    <!-- Chat -->
+    <div class="chat-panel">
+      <div class="chat-header">💬 چت زنده</div>
+      <div class="msgs" id="msgs">
+        <div class="msg system">به اتاق وصل شدی 👋</div>
+      </div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInput" placeholder="پیام..."></textarea>
+        <button class="send-btn" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+
+    <!-- Video -->
+    <div class="video-panel" id="videoPanel">
+      <div class="video-wrapper" id="videoWrapper">
+
+        <!-- Upload zone (host only) -->
+        <div class="upload-zone" id="uploadZone">
+          <div class="drop-area" id="dropArea" onclick="triggerFilePick()">
+            <div class="drop-icon">🎥</div>
+            <div class="drop-title">فایل ویدیو رو انتخاب کن</div>
+            <div class="drop-sub">فایل رو اینجا بکش یا کلیک کن</div>
+            <div class="drop-formats">MP4 · MKV · AVI · MOV · WebM · هر سایزی</div>
+          </div>
+          <div class="upload-progress-wrap" id="progressWrap">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-label" id="progressLabel">در حال بارگذاری...</div>
+          </div>
+        </div>
+
+        <!-- Viewer waiting zone -->
+        <div class="viewer-zone hidden" id="viewerZone">
+          <div class="viewer-waiting">
+            <div class="big">⏳</div>
+            <h3>منتظر میزبان باش</h3>
+            <p style="font-size:14px;color:var(--text2);line-height:1.6">
+              وقتی میزبان فایل رو انتخاب کنه،<br>تو هم باید همون فایل رو انتخاب کنی
+            </p>
+          </div>
+        </div>
+
+        <!-- Video element -->
+        <video id="videoEl" playsinline></video>
+
+        <!-- Sync toast -->
+        <div class="sync-toast" id="syncToast">همگام‌سازی ✓</div>
+
+        <!-- Controls -->
+        <div class="controls" id="controls">
+          <div class="seek-wrap" id="seekWrap">
+            <div class="seek-track">
+              <div class="seek-fill" id="seekFill"></div>
+            </div>
+          </div>
+          <div class="ctrl-row">
+            <button class="ctrl-btn" id="playBtn" onclick="togglePlay()" title="پخش/توقف">▶</button>
+            <button class="ctrl-btn" onclick="skip(-10)" title="۱۰ ثانیه قبل">⏪</button>
+            <button class="ctrl-btn" onclick="skip(10)" title="۱۰ ثانیه جلو">⏩</button>
+            <span class="time-disp" id="timedisp">۰:۰۰ / ۰:۰۰</span>
+            <div class="vol-wrap">
+              <span style="font-size:16px">🔊</span>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" oninput="setVol(this.value)">
+            </div>
+            <button class="ctrl-btn fullscreen-btn" onclick="goFullscreen()" title="تمام‌صفحه">⛶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="video/*" style="display:none" onchange="fileChosen(this)">
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+// وقتی deploy کردی، این رو با آدرس سرورت عوض کن:
+const WS_URL = location.hostname === 'localhost'
+  ? `ws://localhost:3000`
+  : `wss://${location.host}`;
+
+// ─── STATE ────────────────────────────────────────────────
+let ws = null;
+let myName = '';
+let myRoom = '';
+let isHost = false;
+let videoEl = document.getElementById('videoEl');
+let videoReady = false;
+let isSyncing = false;
+let controlsTimer = null;
+let reconnectTimer = null;
+let reconnectDelay = 1000;
+
+// ─── UTILS ────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function toFa(n) { return String(Math.floor(n)).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]); }
+function fmtTime(s) {
+  s = Math.floor(s || 0);
+  return toFa(Math.floor(s/60)) + ':' + String(s%60).padStart(2,'0');
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function nowTime() {
+  const d = new Date();
+  return d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+// ─── JOIN ─────────────────────────────────────────────────
+document.getElementById('nameInput').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('roomInput').focus(); });
+document.getElementById('roomInput').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
+
+function joinRoom() {
+  const name = $('nameInput').value.trim();
+  const room = $('roomInput').value.trim().replace(/\s+/g,'_');
+  if (!name) { $('nameInput').focus(); return; }
+  if (!room) { $('roomInput').focus(); return; }
+  myName = name;
+  myRoom = room;
+  $('joinScreen').classList.remove('active');
+  $('appScreen').classList.add('active');
+  $('roomLabel').textContent = room;
+  connectWS();
+}
+
+// ─── WEBSOCKET ────────────────────────────────────────────
+function connectWS() {
+  setConnState('connecting');
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch(e) {
+    setConnState('disconnected');
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    reconnectDelay = 1000;
+    setConnState('connected');
+    send({ type: 'join', room: myRoom, name: myName });
+  };
+
+  ws.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    handleMsg(msg);
+  };
+
+  ws.onclose = () => {
+    setConnState('disconnected');
+    scheduleReconnect();
+  };
+
+  ws.onerror = () => {};
+
+  // Keepalive
+  setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) send({ type: 'ping' });
+  }, 25000);
+}
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    addSysMsg('🔄 تلاش برای اتصال مجدد...');
+    connectWS();
+  }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+}
+
+function setConnState(state) {
+  const dot = $('connDot');
+  dot.className = 'conn-dot';
+  if (state === 'connected') dot.classList.add('ok');
+  else if (state === 'connecting') dot.classList.add('warn');
+}
+
+function handleMsg(msg) {
+  switch(msg.type) {
+    case 'joined':
+      isHost = msg.isHost;
+      $('hostBadge').classList.toggle('show', isHost);
+      setupVideoZones();
+      if (isHost) addSysMsg('شما میزبان هستید — فایل ویدیو رو انتخاب کن');
+      break;
+
+    case 'promoted':
+      isHost = true;
+      $('hostBadge').classList.add('show');
+      addSysMsg('⭐ ' + msg.message);
+      setupVideoZones();
+      break;
+
+    case 'room_info':
+      $('viewersLabel').textContent = toFa(msg.count) + ' نفر';
+      break;
+
+    case 'chat':
+      if (msg.system) { addSysMsg(msg.text); break; }
+      addChatMsg(msg.name, msg.text, false, msg.time);
+      break;
+
+    case 'play':
+      if (!videoReady) { promptFileForViewer(); return; }
+      isSyncing = true;
+      videoEl.currentTime = msg.time;
+      videoEl.play().catch(()=>{});
+      updatePlayBtn();
+      showSync();
+      setTimeout(()=>{ isSyncing=false; }, 600);
+      break;
+
+    case 'pause':
+      if (!videoReady) { promptFileForViewer(); return; }
+      isSyncing = true;
+      videoEl.currentTime = msg.time;
+      videoEl.pause();
+      updatePlayBtn();
+      showSync();
+      setTimeout(()=>{ isSyncing=false; }, 600);
+      break;
+
+    case 'seek':
+      if (!videoReady) return;
+      isSyncing = true;
+      videoEl.currentTime = msg.time;
+      showSync();
+      setTimeout(()=>{ isSyncing=false; }, 600);
+      break;
+  }
+}
+
+// ─── VIDEO ZONES ──────────────────────────────────────────
+function setupVideoZones() {
+  if (isHost) {
+    $('uploadZone').classList.remove('hidden');
+    $('viewerZone').classList.add('hidden');
+  } else {
+    $('uploadZone').classList.add('hidden');
+    $('viewerZone').classList.remove('hidden');
+  }
+}
+
+function triggerFilePick() {
+  // Ask permission explicitly
+  if (typeof window !== 'undefined') {
+    $('fileInput').click();
+  }
+}
+
+function promptFileForViewer() {
+  if (videoReady) return;
+  addSysMsg('🎬 میزبان شروع کرد — همون فایل رو انتخاب کن');
+  $('viewerZone').classList.add('hidden');
+  $('uploadZone').classList.remove('hidden');
+  $('fileInput').click();
+}
+
+// Drag & Drop
+const dropArea = $('dropArea');
+['dragenter','dragover'].forEach(ev => {
+  dropArea.addEventListener(ev, e => { e.preventDefault(); dropArea.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(ev => {
+  dropArea.addEventListener(ev, e => { e.preventDefault(); dropArea.classList.remove('drag'); });
+});
+dropArea.addEventListener('drop', e => {
+  const file = e.dataTransfer?.files[0];
+  if (file && file.type.startsWith('video/')) loadLocalFile(file);
+});
+
+function fileChosen(input) {
+  const file = input.files[0];
+  if (!file) return;
+  loadLocalFile(file);
+}
+
+function loadLocalFile(file) {
+  $('progressWrap').classList.add('show');
+  $('progressFill').style.width = '0%';
+  $('progressLabel').textContent = 'در حال بارگذاری...';
+
+  const url = URL.createObjectURL(file);
+  videoEl.src = url;
+  videoEl.load();
+
+  // Simulate loading progress
+  let p = 0;
+  const t = setInterval(()=>{
+    p = Math.min(p + 15, 85);
+    $('progressFill').style.width = p + '%';
+  }, 100);
+
+  videoEl.oncanplay = () => {
+    clearInterval(t);
+    $('progressFill').style.width = '100%';
+    $('progressLabel').textContent = '✅ آماده پخش!';
+    setTimeout(()=>{
+      videoReady = true;
+      videoEl.classList.add('loaded');
+      $('uploadZone').classList.add('hidden');
+      $('viewerZone').classList.add('hidden');
+      $('controls').classList.add('show');
+      showControls();
+      bindVideoEvents();
+      addSysMsg('✅ فایل لود شد — آماده پخش هستی!');
+    }, 400);
+  };
+
+  videoEl.onerror = () => {
+    clearInterval(t);
+    $('progressLabel').textContent = '❌ خطا در بارگذاری';
+    $('progressWrap').classList.remove('show');
+  };
+}
+
+// ─── VIDEO EVENTS ─────────────────────────────────────────
+function bindVideoEvents() {
+  videoEl.addEventListener('timeupdate', onTimeUpdate);
+  videoEl.addEventListener('play', updatePlayBtn);
+  videoEl.addEventListener('pause', updatePlayBtn);
+
+  // Mouse move shows controls
+  $('videoWrapper').addEventListener('mousemove', showControls);
+  $('videoWrapper').addEventListener('touchstart', showControls, { passive: true });
+
+  // Seek bar
+  const seekWrap = $('seekWrap');
+  let seeking = false;
+
+  seekWrap.addEventListener('mousedown', e => { seeking = true; doSeek(e); });
+  document.addEventListener('mousemove', e => { if(seeking) doSeek(e); });
+  document.addEventListener('mouseup', () => { seeking = false; });
+  seekWrap.addEventListener('touchstart', e => { seeking = true; doSeekTouch(e); }, { passive: true });
+  document.addEventListener('touchmove', e => { if(seeking) doSeekTouch(e); }, { passive: true });
+  document.addEventListener('touchend', () => { seeking = false; });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    if (e.key === 'ArrowRight') skip(10);
+    if (e.key === 'ArrowLeft') skip(-10);
+    if (e.key === 'f' || e.key === 'F') goFullscreen();
+  });
+}
+
+function onTimeUpdate() {
+  if (!videoEl.duration) return;
+  const pct = (videoEl.currentTime / videoEl.duration) * 100;
+  $('seekFill').style.width = pct + '%';
+  $('timedisp').textContent = fmtTime(videoEl.currentTime) + ' / ' + fmtTime(videoEl.duration);
+}
+
+function doSeek(e) {
+  const rect = $('seekWrap').getBoundingClientRect();
+  const pct = 1 - Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const t = pct * videoEl.duration;
+  videoEl.currentTime = t;
+  if (isHost) send({ type: 'seek', time: t });
+}
+
+function doSeekTouch(e) {
+  const touch = e.touches[0];
+  doSeek(touch);
+}
+
+function showControls() {
+  $('controls').classList.add('visible');
+  clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(() => {
+    if (!videoEl.paused) $('controls').classList.remove('visible');
+  }, 3000);
+}
+
+// ─── PLAYBACK ─────────────────────────────────────────────
+function togglePlay() {
+  if (!videoReady) return;
+  if (videoEl.paused) {
+    videoEl.play().catch(()=>{});
+    if (isHost) send({ type: 'play', time: videoEl.currentTime });
+  } else {
+    videoEl.pause();
+    if (isHost) send({ type: 'pause', time: videoEl.currentTime });
+  }
+}
+
+function skip(sec) {
+  if (!videoReady) return;
+  const t = Math.max(0, Math.min(videoEl.duration || 0, videoEl.currentTime + sec));
+  videoEl.currentTime = t;
+  if (isHost) send({ type: 'seek', time: t });
+}
+
+function setVol(v) { videoEl.volume = v; }
+
+function updatePlayBtn() {
+  $('playBtn').textContent = videoEl.paused ? '▶' : '⏸';
+  if (!videoEl.paused) showControls();
+  else $('controls').classList.add('visible');
+}
+
+function goFullscreen() {
+  const el = $('videoPanel');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+}
+
+function showSync() {
+  const t = $('syncToast');
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+// ─── CHAT ─────────────────────────────────────────────────
+$('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+function sendChat() {
+  const input = $('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addChatMsg(myName, text, true, Date.now());
+  send({ type: 'chat', text });
+}
+
+function addChatMsg(name, text, isMe, ts) {
+  const msgs = $('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (isMe ? 'me' : 'other');
+  const time = ts ? new Date(ts).getHours() + ':' + String(new Date(ts).getMinutes()).padStart(2,'0') : nowTime();
+  div.innerHTML = `<div class="sender">${esc(name)}</div><div>${esc(text)}</div><div class="mtime">${time}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addSysMsg(text) {
+  const msgs = $('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ─── MISC ─────────────────────────────────────────────────
+function copyRoom() {
+  navigator.clipboard?.writeText(myRoom).then(() => {
+    addSysMsg('✅ کد اتاق کپی شد: ' + myRoom);
+  });
+}
+</script>
+</body>
+</html>
